@@ -5,23 +5,29 @@ const URL_LIST = [
 ];
 
 async function obtenerInformacionWeb(url) {
-  try {
-    const respuesta = await fetch(url);
-    const html = await respuesta.text();
+  const respuesta = await fetch(url);
 
-    // Buscar titulo con expresión regular y asignarlo a variable
-    const regexTitle = /<title[^>]*>(.*?)<\/title>/i;
-    const match = html.match(regexTitle);
-    let titulo = match[1].trim();
-
-    // Devolver el título y la URL original
-    return {
-      titulo: titulo,
-      url: url,
-    };
-  } catch (error) {
-    throw new TypeError(error);
+  if (!respuesta.ok) {
+    throw new Error(
+      `Fallo en la respuesta HTTP: ${respuesta.status} ${respuesta.statusText} para ${url}`
+    );
   }
+
+  const html = await respuesta.text();
+
+  const regexTitle = /<title[^>]*>(.*?)<\/title>/i;
+  const match = html.match(regexTitle);
+
+  if (!match || !match[1]) {
+    throw new Error(`No se pudo encontrar el tag <title> en el HTML de ${url}`);
+  }
+
+  let titulo = match[1].trim();
+
+  return {
+    titulo: titulo,
+    url: url,
+  };
 }
 
 async function procesarMultiplesAPIs() {
