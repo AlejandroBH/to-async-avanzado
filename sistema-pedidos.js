@@ -30,11 +30,40 @@ async function obtenerInformacionWeb(url) {
   };
 }
 
+async function obtenerInformacionWebConReintentos(
+  url,
+  intentos = 3,
+  delay = 1000
+) {
+  let ultimoError = null;
+
+  for (let intento = 1; intento <= intentos; intento++) {
+    try {
+      console.log(`[${url}] Intento ${intento}/${intentos}...`);
+      const resultado = await obtenerInformacionWeb(url);
+      console.log(`[${url}] Éxito en el intento ${intento}.`);
+
+      return resultado;
+    } catch (error) {
+      ultimoError = error;
+      console.warn(`[${url}] Falló el intento ${intento}: ${error.message}`);
+
+      if (intento < intentos) {
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw new Error(
+    `Fallo definitivo para ${url} después de ${intentos} intentos. Último error: ${lastError.message}`
+  );
+}
+
 async function procesarMultiplesAPIs() {
   const llamadasAPI = [];
 
   URL_LIST.forEach((url) => {
-    llamadasAPI.push(obtenerInformacionWeb(url));
+    llamadasAPI.push(obtenerInformacionWebConReintentos(url, 3, 2000));
   });
 
   const resultados = await Promise.allSettled(llamadasAPI);
@@ -47,11 +76,11 @@ async function procesarMultiplesAPIs() {
     .filter((r) => r.status === "rejected")
     .map((r) => r.reason.message);
 
-  console.log(exitosos);
-
   console.log(`${exitosos.length} APIs respondieron correctamente`);
   console.log(`${fallidos.length} APIs fallaron`);
   return { exitosos, fallidos, todosLosResultados: resultados };
 }
 
-procesarMultiplesAPIs();
+procesarMultiplesAPIs().then(({ exitosos }) => {
+  console.log({ exitosos: exitosos });
+});
